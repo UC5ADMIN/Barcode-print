@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Label Entry</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Playfair+Display:wght@700&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #f5f0e8;
+    --card: #fffdf8;
+    --brown: #3d2b1f;
+    --tan: #c49a6c;
+    --accent: #8b3a1a;
+    --text: #2a1f17;
+    --muted: #9e8a7a;
+    --border: #ddd5c8;
+    --success: #2d6a4f;
+  }
+
+  body {
+    background: var(--bg);
+    font-family: 'DM Mono', monospace;
+    color: var(--text);
+    min-height: 100vh;
+    padding: 0;
+  }
+
+  header {
+    background: var(--brown);
+    color: #f5f0e8;
+    padding: 20px 24px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+
+  header svg { flex-shrink: 0; }
+
+  header h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.3rem;
+    line-height: 1.2;
+  }
+
+  header p {
+    font-size: 0.65rem;
+    color: var(--tan);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-top: 2px;
+  }
+
+  .container {
+    max-width: 480px;
+    margin: 0 auto;
+    padding: 24px 16px 40px;
+  }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 16px;
+  }
+
+  .card-title {
+    font-size: 0.65rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .field {
+    margin-bottom: 18px;
+  }
+
+  label {
+    display: block;
+    font-size: 0.7rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+
+  input, select {
+    width: 100%;
+    padding: 12px 14px;
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    font-family: 'DM Mono', monospace;
+    font-size: 1rem;
+    color: var(--text);
+    background: var(--bg);
+    transition: border-color 0.2s, box-shadow 0.2s;
+    appearance: none;
+    -webkit-appearance: none;
+  }
+
+  input:focus, select:focus {
+    outline: none;
+    border-color: var(--tan);
+    box-shadow: 0 0 0 3px rgba(196,154,108,0.15);
+  }
+
+  input.fetched {
+    background: #f0f7f0;
+    border-color: #a8c5b5;
+    color: var(--success);
+  }
+
+  .fetched-label {
+    font-size: 0.65rem;
+    color: var(--success);
+    margin-top: 4px;
+    display: none;
+  }
+
+  .fetched-label.visible { display: block; }
+
+  select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%239e8a7a' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 36px;
+  }
+
+  .status-bar {
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-size: 0.75rem;
+    margin-bottom: 18px;
+    display: none;
+  }
+
+  .status-bar.loading {
+    display: block;
+    background: #fff8e8;
+    border: 1px solid #f0d080;
+    color: #8a6020;
+  }
+
+  .status-bar.error {
+    display: block;
+    background: #fff0f0;
+    border: 1px solid #f0a0a0;
+    color: #8a2020;
+  }
+
+  .status-bar.success {
+    display: block;
+    background: #f0f7f0;
+    border: 1px solid #a8c5b5;
+    color: var(--success);
+  }
+
+  .preview-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.75rem;
+    margin-top: 4px;
+  }
+
+  .preview-table td {
+    padding: 7px 10px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .preview-table td:first-child {
+    color: var(--muted);
+    width: 45%;
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .preview-table td:last-child {
+    font-weight: 500;
+  }
+
+  .preview-table tr:last-child td { border-bottom: none; }
+
+  .row-badge {
+    display: inline-block;
+    background: var(--accent);
+    color: white;
+    font-size: 0.65rem;
+    padding: 3px 8px;
+    border-radius: 20px;
+    margin-left: 8px;
+    vertical-align: middle;
+  }
+
+  .btn {
+    width: 100%;
+    padding: 15px;
+    border: none;
+    border-radius: 10px;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.85rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .btn-primary {
+    background: var(--brown);
+    color: #f5f0e8;
+    margin-bottom: 10px;
+  }
+
+  .btn-primary:hover { background: #2a1f17; }
+  .btn-primary:disabled { background: var(--border); color: var(--muted); cursor: not-allowed; }
+
+  .btn-secondary {
+    background: transparent;
+    color: var(--accent);
+    border: 1.5px solid var(--accent);
+  }
+
+  .btn-secondary:hover { background: rgba(139,58,26,0.06); }
+
+  .config-section {
+    background: var(--brown);
+    color: #f5f0e8;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+
+  .config-section h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1rem;
+    margin-bottom: 4px;
+  }
+
+  .config-section p {
+    font-size: 0.7rem;
+    color: var(--tan);
+    margin-bottom: 16px;
+  }
+
+  .config-section input {
+    background: rgba(255,255,255,0.1);
+    border-color: rgba(255,255,255,0.2);
+    color: #f5f0e8;
+  }
+
+  .config-section input::placeholder { color: rgba(255,255,255,0.3); }
+  .config-section input:focus { border-color: var(--tan); }
+
+  .config-section label { color: var(--tan); }
+
+  .config-section .btn {
+    background: var(--tan);
+    color: var(--brown);
+    margin-top: 8px;
+  }
+
+  .month-display {
+    padding: 12px 14px;
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    background: var(--bg);
+    font-size: 1rem;
+    color: var(--muted);
+  }
+
+  .setup-note {
+    font-size: 0.7rem;
+    color: var(--muted);
+    text-align: center;
+    margin-top: 20px;
+    line-height: 1.6;
+  }
+
+  .setup-note a { color: var(--accent); }
+
+  /* Search box */
+  .search-wrap {
+    position: relative;
+  }
+
+  .search-wrap input {
+    padding-right: 40px;
+  }
+
+  .search-icon {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    pointer-events: none;
+    color: var(--muted);
+  }
+
+  .dropdown {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0; right: 0;
+    background: var(--card);
+    border: 1.5px solid var(--tan);
+    border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(61,43,31,0.15);
+    z-index: 100;
+    max-height: 220px;
+    overflow-y: auto;
+    display: none;
+  }
+
+  .dropdown.open { display: block; }
+
+  .dropdown-item {
+    padding: 11px 14px;
+    cursor: pointer;
+    border-bottom: 1px solid var(--border);
+    transition: background 0.15s;
+  }
+
+  .dropdown-item:last-child { border-bottom: none; }
+
+  .dropdown-item:hover, .dropdown-item.active {
+    background: #fdf6ec;
+  }
+
+  .dropdown-item .di-sku {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--text);
+  }
+
+  .dropdown-item .di-name {
+    font-size: 0.7rem;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+
+  .dropdown-empty {
+    padding: 14px;
+    font-size: 0.75rem;
+    color: var(--muted);
+    text-align: center;
+  }
+
+</style>
+</head>
+<body>
+
+<header>
+  <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+    <rect width="32" height="32" rx="8" fill="#c49a6c" opacity="0.2"/>
+    <path d="M6 22 Q16 10 26 22" stroke="#c49a6c" stroke-width="2" fill="none"/>
+    <path d="M8 22 Q16 14 24 22 L24 26 Q16 22 8 26 Z" fill="#c49a6c" opacity="0.6"/>
+    <circle cx="16" cy="11" r="2.5" fill="#c49a6c"/>
+  </svg>
+  <div>
+    <h1>Label Entry</h1>
+    <p>Barcode Data Form</p>
+  </div>
+</header>
+
+<div class="container">
+
+  <!-- Config Section -->
+  <div class="config-section" id="configSection">
+    <h2>Setup</h2>
+    <p>Enter your Google Sheet details once to get started.</p>
+    <div class="field">
+      <label>Google Sheet ID</label>
+      <input type="text" id="sheetId" placeholder="Paste your Sheet ID here" />
+    </div>
+    <div class="field">
+      <label>Sheet Name (tab)</label>
+      <input type="text" id="sheetName" placeholder="e.g. Products" />
+    </div>
+    <div class="field">
+      <label>Google API Key</label>
+      <input type="text" id="apiKey" placeholder="Your Google Sheets API Key" />
+    </div>
+    <button class="btn" onclick="saveConfig()">Save & Continue</button>
+    <p style="margin-top:12px; margin-bottom:0; font-size:0.65rem;">Need help? See setup guide below.</p>
+  </div>
+
+  <!-- Entry Form -->
+  <div id="formSection" style="display:none;">
+
+    <div class="card">
+      <div class="card-title">Product Details</div>
+
+      <div class="field">
+        <label>Search Product (Name or SKU)</label>
+        <div class="search-wrap">
+          <input type="text" id="modelInput" placeholder="Type to search..." oninput="onSearchInput()" onkeydown="onSearchKeydown(event)" autocomplete="off" />
+          <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+          <div class="dropdown" id="searchDropdown"></div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Colour</label>
+        <input type="text" id="colourInput" placeholder="e.g. Tan" autocomplete="off" />
+      </div>
+
+      <div class="field">
+        <label>Size <span style="color:var(--muted); font-size:0.65rem;">(footwear)</span></label>
+        <input type="text" id="sizeInput" placeholder="e.g. 42 / UK8 / leave blank if N/A" />
+      </div>
+
+      <div class="field">
+        <label>Quantity</label>
+        <input type="number" id="qtyInput" placeholder="e.g. 10" min="1" />
+      </div>
+
+      <div class="field">
+        <label>Month of Manufacture</label>
+        <div class="month-display" id="monthDisplay"></div>
+      </div>
+    </div>
+
+    <div id="statusBar" class="status-bar"></div>
+
+    <!-- Fetched Data Preview -->
+    <div class="card" id="previewCard" style="display:none;">
+      <div class="card-title">
+        Fetched from Sheet
+        <span class="row-badge" id="rowBadge"></span>
+      </div>
+      <table class="preview-table">
+        <tr><td>Product Name</td><td id="pName">—</td></tr>
+        <tr><td>SKU</td><td id="pSku">—</td></tr>
+        <tr><td>MRP</td><td id="pMrp">—</td></tr>
+        <tr><td>Selling Price</td><td id="pSp">—</td></tr>
+      </table>
+    </div>
+
+    <button class="btn btn-primary" id="fetchBtn" onclick="fetchProduct()">Look Up Product</button>
+    <button class="btn btn-secondary" id="downloadBtn" onclick="downloadExcel()" style="display:none;">Download Excel File</button>
+
+    <p class="setup-note">
+      <a href="#" onclick="showConfig()">Change sheet settings</a>
+    </p>
+  </div>
+
+  <p class="setup-note" id="setupGuide">
+    <strong>Setup Guide:</strong> Share your Google Sheet publicly (view only), enable the Google Sheets API in Google Cloud Console, create an API key, and paste the Sheet ID (from the URL) above.
+  </p>
+
+</div>
+
+<script>
+  // ---- State ----
+  let fetchedData = null;
+  let config = {};
+  let allProducts = [];       // full product list from sheet
+  let activeIdx = -1;         // keyboard nav index
+
+  // ---- Init ----
+  window.onload = () => {
+    const saved = localStorage.getItem('labelAppConfig');
+    if (saved) {
+      config = JSON.parse(saved);
+      document.getElementById('sheetId').value = config.sheetId || '';
+      document.getElementById('sheetName').value = config.sheetName || '';
+      document.getElementById('apiKey').value = config.apiKey || '';
+      showForm();
+    }
+    setMonthDisplay();
+  };
+
+  function setMonthDisplay() {
+    const now = new Date();
+    const month = now.toLocaleString('default', { month: 'long' });
+    const year = now.getFullYear();
+    document.getElementById('monthDisplay').textContent = `${month} ${year}`;
+  }
+
+  // ---- Config ----
+  function saveConfig() {
+    const sheetId = document.getElementById('sheetId').value.trim();
+    const sheetName = document.getElementById('sheetName').value.trim();
+    const apiKey = document.getElementById('apiKey').value.trim();
+    if (!sheetId || !sheetName || !apiKey) {
+      alert('Please fill in all three fields.');
+      return;
+    }
+    config = { sheetId, sheetName, apiKey };
+    localStorage.setItem('labelAppConfig', JSON.stringify(config));
+    showForm();
+  }
+
+  // ---- Load all products for search ----
+  async function loadAllProducts() {
+    try {
+      const range = encodeURIComponent(config.sheetName + '!A:Z');
+      const url = 'https://sheets.googleapis.com/v4/spreadsheets/' + config.sheetId + '/values/' + range + '?key=' + config.apiKey;
+      const res = await fetch(url);
+      if (!res.ok) return;
+      const data = await res.json();
+      const rows = data.values;
+      if (!rows || rows.length < 2) return;
+      const headers = rows[0].map(h => h.trim().toLowerCase());
+      const colIdx = name => headers.findIndex(h => h.includes(name.toLowerCase()));
+      const skuIdx = colIdx('sku');
+      const nameIdx = colIdx('product name') !== -1 ? colIdx('product name') : colIdx('name');
+      const mrpIdx = colIdx('mrp');
+      const spIdx = colIdx('selling price') !== -1 ? colIdx('selling price') : colIdx('sp');
+      allProducts = rows.slice(1).map(row => ({
+        sku: (row[skuIdx] || '').trim(),
+        productName: nameIdx !== -1 ? (row[nameIdx] || '').trim() : '',
+        mrp: mrpIdx !== -1 ? (row[mrpIdx] || '').trim() : '',
+        sellingPrice: spIdx !== -1 ? (row[spIdx] || '').trim() : '',
+      })).filter(p => p.sku);
+    } catch(e) {}
+  }
+
+  // ---- Search Input Handler ----
+  function onSearchInput() {
+    fetchedData = null;
+    document.getElementById('previewCard').style.display = 'none';
+    document.getElementById('downloadBtn').style.display = 'none';
+    setStatus('', '');
+    activeIdx = -1;
+    const q = document.getElementById('modelInput').value.trim().toLowerCase();
+    if (!q) { closeDropdown(); return; }
+    const matches = allProducts.filter(p =>
+      p.sku.toLowerCase().includes(q) || p.productName.toLowerCase().includes(q)
+    ).slice(0, 8);
+    renderDropdown(matches, q);
+  }
+
+  function renderDropdown(matches, q) {
+    const dd = document.getElementById('searchDropdown');
+    if (!matches.length) {
+      dd.innerHTML = '<div class="dropdown-empty">No products found</div>';
+      dd.classList.add('open');
+      return;
+    }
+    dd.innerHTML = matches.map((p, i) => {
+      const skuH = highlight(p.sku, q);
+      const nameH = highlight(p.productName, q);
+      return '<div class="dropdown-item" onclick="selectProduct(\'' + p.sku + '\')"><div class="di-sku">' + skuH + '</div>' + (p.productName ? '<div class="di-name">' + nameH + '</div>' : '') + '</div>';
+    }).join('');
+    dd.classList.add('open');
+  }
+
+  function highlight(text, q) {
+    if (!q || !text) return text;
+    const re = new RegExp('(' + q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi');
+    return text.replace(re, '<mark style="background:rgba(196,154,108,0.35);border-radius:2px;">$1</mark>');
+  }
+
+  function closeDropdown() {
+    document.getElementById('searchDropdown').classList.remove('open');
+    activeIdx = -1;
+  }
+
+  function selectProduct(sku) {
+    document.getElementById('modelInput').value = sku;
+    closeDropdown();
+    const colour = document.getElementById('colourInput').value.trim();
+    const qty = parseInt(document.getElementById('qtyInput').value);
+    if (colour && qty > 0) fetchProduct();
+  }
+
+  function onSearchKeydown(e) {
+    const dd = document.getElementById('searchDropdown');
+    const items = dd.querySelectorAll('.dropdown-item');
+    if (!dd.classList.contains('open') || !items.length) return;
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      activeIdx = Math.min(activeIdx + 1, items.length - 1);
+      updateActive(items);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      activeIdx = Math.max(activeIdx - 1, 0);
+      updateActive(items);
+    } else if (e.key === 'Enter' && activeIdx >= 0) {
+      e.preventDefault();
+      items[activeIdx].click();
+    } else if (e.key === 'Escape') {
+      closeDropdown();
+    }
+  }
+
+  function updateActive(items) {
+    items.forEach((item, i) => item.classList.toggle('active', i === activeIdx));
+    if (activeIdx >= 0) items[activeIdx].scrollIntoView({ block: 'nearest' });
+  }
+
+  document.addEventListener('click', e => {
+    if (!e.target.closest('.search-wrap')) closeDropdown();
+  });
+
+  function showForm() {
+    document.getElementById('configSection').style.display = 'none';
+    document.getElementById('formSection').style.display = 'block';
+    document.getElementById('setupGuide').style.display = 'none';
+    loadAllProducts();
+  }
+
+  function showConfig() {
+    document.getElementById('configSection').style.display = 'block';
+    document.getElementById('formSection').style.display = 'none';
+    document.getElementById('setupGuide').style.display = 'block';
+  }
+
+  // ---- Fetch from Google Sheets ----
+  async function fetchProduct() {
+    const model = document.getElementById('modelInput').value.trim();
+    const colour = document.getElementById('colourInput').value.trim();
+    const size = document.getElementById('sizeInput').value.trim();
+    const qty = parseInt(document.getElementById('qtyInput').value);
+
+    if (!model) { setStatus('error', 'Please enter a Model Number.'); return; }
+    if (!colour) { setStatus('error', 'Please enter a Colour.'); return; }
+    if (!qty || qty < 1) { setStatus('error', 'Please enter a valid Quantity.'); return; }
+
+    setStatus('loading', 'Looking up product...');
+
+    try {
+      const range = encodeURIComponent(`${config.sheetName}!A:Z`);
+      const url = `https://sheets.googleapis.com/v4/spreadsheets/${config.sheetId}/values/${range}?key=${config.apiKey}`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`API error: ${res.status}`);
+      const data = await res.json();
+
+      const rows = data.values;
+      if (!rows || rows.length < 2) throw new Error('No data found in sheet.');
+
+      const headers = rows[0].map(h => h.trim().toLowerCase());
+
+      // Find column indices
+      const colIdx = name => headers.findIndex(h => h.includes(name.toLowerCase()));
+      const skuIdx = colIdx('sku');
+      const nameIdx = colIdx('product name') !== -1 ? colIdx('product name') : colIdx('name');
+      const mrpIdx = colIdx('mrp');
+      const spIdx = colIdx('selling price') !== -1 ? colIdx('selling price') : colIdx('sp');
+
+      if (skuIdx === -1) throw new Error('Could not find SKU column in sheet.');
+
+      // Find matching row by SKU/model
+      const match = rows.slice(1).find(row => {
+        const sku = (row[skuIdx] || '').trim().toLowerCase();
+        return sku === model.toLowerCase();
+      });
+
+      if (!match) throw new Error(`No product found with SKU/Model: "${model}"`);
+
+      fetchedData = {
+        productName: nameIdx !== -1 ? (match[nameIdx] || '') : '',
+        sku: match[skuIdx] || model,
+        mrp: mrpIdx !== -1 ? (match[mrpIdx] || '') : '',
+        sellingPrice: spIdx !== -1 ? (match[spIdx] || '') : '',
+        colour,
+        size,
+        qty,
+      };
+
+      document.getElementById('pName').textContent = fetchedData.productName || '—';
+      document.getElementById('pSku').textContent = fetchedData.sku;
+      document.getElementById('pMrp').textContent = fetchedData.mrp ? `₹${fetchedData.mrp}` : '—';
+      document.getElementById('pSp').textContent = fetchedData.sellingPrice ? `₹${fetchedData.sellingPrice}` : '—';
+      document.getElementById('rowBadge').textContent = `${qty} rows`;
+
+      document.getElementById('previewCard').style.display = 'block';
+      document.getElementById('downloadBtn').style.display = 'block';
+      setStatus('success', `✓ Product found. Ready to download ${qty} row${qty>1?'s':''}.`);
+
+    } catch (err) {
+      setStatus('error', '✗ ' + err.message);
+    }
+  }
+
+  // ---- Download Excel ----
+  function downloadExcel() {
+    if (!fetchedData) return;
+
+    const now = new Date();
+    const month = now.toLocaleString('default', { month: 'long' });
+    const year = now.getFullYear();
+    const monthStr = `${month} ${year}`;
+
+    const headers = ['Product Name', 'SKU', 'Colour', 'Size', 'MRP', 'Selling Price', 'Month of Manufacture'];
+
+    const rowData = [
+      fetchedData.productName,
+      fetchedData.sku,
+      fetchedData.colour,
+      fetchedData.size,
+      fetchedData.mrp,
+      fetchedData.sellingPrice,
+      monthStr,
+    ];
+
+    const wsData = [headers];
+    for (let i = 0; i < fetchedData.qty; i++) {
+      wsData.push([...rowData]);
+    }
+
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+
+    // Column widths
+    ws['!cols'] = [
+      {wch: 20}, {wch: 14}, {wch: 14}, {wch: 10},
+      {wch: 12}, {wch: 14}, {wch: 22}
+    ];
+
+    XLSX.utils.book_append_sheet(wb, ws, 'Labels');
+
+    const filename = `labels_${fetchedData.sku}_${fetchedData.colour.replace(/\s+/g,'_')}_${Date.now()}.xlsx`;
+    XLSX.writeFile(wb, filename);
+  }
+
+  // ---- Helpers ----
+  function setStatus(type, msg) {
+    const bar = document.getElementById('statusBar');
+    bar.className = 'status-bar' + (type ? ` ${type}` : '');
+    bar.textContent = msg;
+  }
+</script>
+
+</body>
+</html>
